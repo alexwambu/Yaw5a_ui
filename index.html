@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Movie Maker UI</title>
+  <style>
+    :root {
+      --bg:#0f1724; --card:#0b1220; --muted:#9aa4b2; --accent:#4f46e5; --text:#e6eef6;
+    }
+    *{box-sizing:border-box;font-family:Inter,ui-sans-serif,system-ui}
+    body{margin:0;background:#071020;color:var(--text);min-height:100vh}
+    .app{max-width:800px;margin:20px auto;padding:18px}
+    .header h1{margin:0;font-size:22px}
+    .card{background:rgba(255,255,255,0.04);padding:14px;border-radius:12px;margin-bottom:18px}
+    textarea,input{width:100%;padding:10px;border-radius:8px;
+      border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--text)}
+    button{padding:8px 14px;margin-top:10px;border-radius:8px;border:0;background:var(--accent);color:white;cursor:pointer}
+    .output{margin-top:14px;padding:10px;background:rgba(255,255,255,0.05);border-radius:8px}
+    a.download{display:inline-block;margin-top:10px;padding:8px 12px;border-radius:8px;background:#22c55e;color:white;text-decoration:none}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="header">
+    <h1>🎬 Movie Maker</h1>
+    <p>Backend: <span id="api-base"></span></p>
+  </header>
+
+  <div class="card">
+    <h2>Write Your Script</h2>
+    <textarea id="script-text" rows="8" placeholder="Enter your movie script here..."></textarea>
+    <button onclick="createMovie()">Create Movie</button>
+    <div id="result" class="output"></div>
+  </div>
+</div>
+
+<script>
+  const API_BASE = "https://yaw5a.onrender.com"; // your backend
+  document.getElementById("api-base").textContent = API_BASE;
+
+  async function request(path, opts={}) {
+    const res = await fetch(API_BASE + path, {
+      headers: {"Content-Type":"application/json"},
+      ...opts
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return res.json().catch(() => ({}));
+  }
+
+  async function createMovie(){
+    const script = document.getElementById("script-text").value.trim();
+    if(!script) return alert("Please write a script first!");
+
+    document.getElementById("result").innerHTML = "⏳ Creating movie, please wait...";
+
+    try {
+      // Send script to backend movie worker
+      const res = await request("/worker/run-movie", {
+        method:"POST",
+        body:JSON.stringify({
+          script:"movie.py",
+          params:{ text:script, auto:true }
+        })
+      });
+
+      // If backend responds with download URL
+      if(res.url){
+        document.getElementById("result").innerHTML =
+          `✅ Movie created! <br/><a class="download" href="${res.url}" target="_blank">Download Movie</a>`;
+      } else {
+        document.getElementById("result").innerHTML = "⚠️ Movie created but no download link returned.";
+      }
+
+    } catch(e){
+      document.getElementById("result").innerHTML = "❌ Error: "+e.message;
+    }
+  }
+</script>
+</body>
+</html>
